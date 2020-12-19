@@ -1,5 +1,5 @@
 # generic
 
- solution for TSP using generic algorithm.
+ solution of TSP using generic algorithm.
  
  
