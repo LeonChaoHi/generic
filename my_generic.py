@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class generic():
@@ -60,11 +61,11 @@ class generic():
         self.population = np.concatenate((self.population, self.cross_children, self.mutation_children), axis=0)
         select_idx = np.random.choice(self.num_population + self.cross_num + self.mutate_num, 
                                       self.num_population, replace=False,
-                                      p = self.population[:,0]/np.sum(self.population[:,0]))
+                                      p = np.exp(self.population[:,0])/np.sum(np.exp(self.population[:,0])))
         self.population = self.population[select_idx]
         
     def reproduceGeneration(self) -> float:
-        self.crossOver(0.4)
+        self.crossOver(0.2)
         self.mutate()
         self.select()
         return 10000.0 / self.population[:, 0].max()
@@ -90,6 +91,8 @@ def main(cities_location : np.ndarray):
         print("generation ", i)
         dist_wrt_generations.append(GA.reproduceGeneration())
     print("Best route:", GA.getBestRoute())
+    plt.plot(dist_wrt_generations)
+    plt.show()
     
     
 if __name__ == "__main__":
