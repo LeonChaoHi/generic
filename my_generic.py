@@ -16,7 +16,7 @@ class generic():
         self.dist_mat = np.sqrt((coord_x - coord_x.T)**2 + (coord_y - coord_y.T)**2)
         # initialize first generation population 
         # @population ndarray: num_cities * [fitness, cities order]
-        self.population = np.zeros(self.num_population, self.num_cities+1)
+        self.population = np.zeros((self.num_population, self.num_cities+1))
         for i in range(self.num_population):
             random_idx = np.random.permutation(np.arange(self.num_cities))
             self.population[i, 0] = self.calcFitness(random_idx)
@@ -28,26 +28,40 @@ class generic():
         children = np.zeros((self.cross_num, self.num_cities+1))
         for i in range(self.cross_num):
             parent_idx_i = np.random.choice(self.num_population, 2, replace=False)
-            parent1 = self.population[parent_idx_i[0]]
-            parent2 = self.population[parent_idx_i[1]]
-            cross_segment = 1
-            
-            child = 0
+            parent1 = self.population[parent_idx_i[0], 1:]
+            parent2 = self.population[parent_idx_i[1], 1:]
+            child = np.zeros_like(parent1)
+            # cross over
+            cross_start = np.random.choice(self.num_cities - crossSpan, 1)[0]
+            cross_segment =  parent1[cross_start:(cross_start+crossSpan)]
+            rest_segment = []
+            for gene in parent2:
+                if gene not in cross_segment:
+                    rest_segment.append(gene)
+            rest_segment = np.array(rest_segment)
+            child = np.concatenate((rest_segment[:cross_start], cross_segment, rest_segment[cross_start:]))
+            # update children
+            children[i,0], children[i,1:] = self.calcFitness(child), child
+        self.cross_children = children
+
     
     def mutate(self):
         mutation = np.zeros((self.mutate_num, self.num_cities+1))
         parent_idx = np.random.choice(self.num_population, self.mutate_num, replace=False)
         for i in range(self.mutate_num):
-            swap_gene = np.random.choice(self.num_cities, 2, replace=False)
+            swap_gene = np.random.choice(np.arange(1, self.num_cities), 2, replace=False)
             mutation[i] = self.population[parent_idx[i]]
             mutation[i,swap_gene[0]], mutation[i,swap_gene[1]] = mutation[i,swap_gene[1]], mutation[i,swap_gene[0]]
             mutation[i, 0] = self.calcFitness(mutation[i,1:])
-        self.mutation = mutation
+        self.mutation_children = mutation
             
     
     def select(self):
-        select_idx = np.random.choice(self.num_population + self.cross_num + self.mutate_num, self.num_population, replace=False)
-        self.population = None
+        self.population = np.concatenate((self.population, self.cross_children, self.mutation_children), axis=0)
+        select_idx = np.random.choice(self.num_population + self.cross_num + self.mutate_num, 
+                                      self.num_population, replace=False,
+                                      p = self.population[:,0]/np.sum(self.population[:,0]))
+        self.population = self.population[select_idx]
         
     def reproduceGeneration(self) -> float:
         self.crossOver(0.4)
@@ -60,21 +74,20 @@ class generic():
         return self.population[max_idx, 1:]
         
     def calcFitness(self, citiesOrder : np.ndarray) -> float:
-        assert(citiesOrder.shape[1]==self.dist_Mat.shape[0]==self.dist_Mat.shape[1])
-        idx1 = citiesOrder
-        idx2 = np.concatenate(idx1[1:], idx1[0])
-        dist = self.dist_Mat[idx1, idx2]
+        assert(citiesOrder.shape[0]==self.dist_mat.shape[0]==self.dist_mat.shape[1])
+        idx1 = citiesOrder.astype(np.int64)
+        idx2 = np.append(idx1[1:], idx1[0])
+        dist = self.dist_mat[idx1, idx2]
         return 10000.0/np.sum(dist)    
-
-    
-
+  
 
 def main(cities_location : np.ndarray):
     num_generation = 200
     dist_wrt_generations = []
     GA = generic()
     GA.initPopulation(cities_location)
-    for _ in range(num_generation):
+    for i in range(num_generation):
+        print("generation ", i)
         dist_wrt_generations.append(GA.reproduceGeneration())
     print("Best route:", GA.getBestRoute())
     
