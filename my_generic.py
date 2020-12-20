@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 class generic():
     def __init__(self) -> None:
         super().__init__()
-        self.num_population=100#随机生成的初始解的总数
-        self.cross_num=20#交叉解的个数
-        self.mutate_num=10#变异解的个数
+        self.num_population = 100#随机生成的初始解的总数
+        self.cross_num = 20#交叉解的个数
+        self.mutate_num = 10#变异解的个数
+        self.best_route = None
         
     def initPopulation(self, citiesCoord : np.ndarray):
         self.num_cities = citiesCoord.shape[0]
@@ -45,7 +46,6 @@ class generic():
             children[i,0], children[i,1:] = self.calcFitness(child), child
         self.cross_children = children
 
-    
     def mutate(self):
         mutation = np.zeros((self.mutate_num, self.num_cities+1))
         parent_idx = np.random.choice(self.num_population, self.mutate_num, replace=False)
@@ -55,7 +55,6 @@ class generic():
             mutation[i,swap_gene[0]], mutation[i,swap_gene[1]] = mutation[i,swap_gene[1]], mutation[i,swap_gene[0]]
             mutation[i, 0] = self.calcFitness(mutation[i,1:])
         self.mutation_children = mutation
-            
     
     def select(self):
         self.population = np.concatenate((self.population, self.cross_children, self.mutation_children), axis=0)
@@ -65,14 +64,16 @@ class generic():
         self.population = self.population[select_idx]
         
     def reproduceGeneration(self) -> float:
-        self.crossOver(0.2)
+        self.crossOver(0.6)
         self.mutate()
         self.select()
-        return 10000.0 / self.population[:, 0].max()
+        best_individual = self.population[np.argmax(self.population[:, 0])]
+        if self.best_route is None or best_individual[0]>self.best_route[0]:
+            self.best_route = best_individual
+        return 10000.0 / best_individual[0]
     
-    def getBestRoute(self) -> np.ndarray:
-        max_idx = np.argmax(self.population[:, 0])
-        return self.population[max_idx, 1:]
+    def getBestRoute(self):
+        return 10000.0 / self.best_route[0], self.best_route[1:]
         
     def calcFitness(self, citiesOrder : np.ndarray) -> float:
         assert(citiesOrder.shape[0]==self.dist_mat.shape[0]==self.dist_mat.shape[1])
@@ -80,10 +81,18 @@ class generic():
         idx2 = np.append(idx1[1:], idx1[0])
         dist = self.dist_mat[idx1, idx2]
         return 10000.0/np.sum(dist)    
-  
+
+
+def drawRoute(cities_location:np.ndarray, cities_route:np.ndarray) -> None:
+    assert(cities_location.shape[1]==2)
+    cities_route = np.append(cities_route, cities_route[0])
+    cities_location = cities_location[cities_route.astype(np.int64), :]
+    plt.plot(cities_location[:,0], cities_location[:,1], 'bo-')
+    plt.show()
+
 
 def main(cities_location : np.ndarray):
-    num_generation = 200
+    num_generation = 1000
     dist_wrt_generations = []
     GA = generic()
     GA.initPopulation(cities_location)
@@ -93,6 +102,8 @@ def main(cities_location : np.ndarray):
     print("Best route:", GA.getBestRoute())
     plt.plot(dist_wrt_generations)
     plt.show()
+    _, best_route = GA.getBestRoute()
+    drawRoute(cities_location, best_route)
     
     
 if __name__ == "__main__":
