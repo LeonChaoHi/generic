@@ -3,11 +3,13 @@ import matplotlib.pyplot as plt
 
 
 class generic():
+    """Class of generic algorithm
+    """
     def __init__(self) -> None:
         super().__init__()
         self.num_population = 100#随机生成的初始解的总数
-        self.cross_num = 20#交叉解的个数
-        self.mutate_num = 10#变异解的个数
+        self.cross_num = 80#交叉解的个数
+        self.mutate_num = 80#变异解的个数
         self.best_route = None
         
     def initPopulation(self, citiesCoord : np.ndarray):
@@ -64,7 +66,7 @@ class generic():
         self.population = self.population[select_idx]
         
     def reproduceGeneration(self) -> float:
-        self.crossOver(0.6)
+        self.crossOver(0.4)
         self.mutate()
         self.select()
         best_individual = self.population[np.argmax(self.population[:, 0])]
@@ -92,7 +94,7 @@ def drawRoute(cities_location:np.ndarray, cities_route:np.ndarray) -> None:
 
 
 def main(cities_location : np.ndarray):
-    num_generation = 1000
+    num_generation = 500
     dist_wrt_generations = []
     GA = generic()
     GA.initPopulation(cities_location)
